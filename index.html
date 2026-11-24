@@ -338,6 +338,9 @@ footer.foot::before{content:"";position:absolute;top:-1px;left:50%;transform:tra
 .chips.sub .chip{height:32px;font-size:13px;padding:0 14px;border-color:transparent;background:color-mix(in srgb,var(--ink) 5%,transparent)}
 .chips.sub .chip[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
 .secpick button{padding:0 16px}
+.bs{display:block;font-size:12px;color:var(--soft);font-weight:500;margin-top:2px}
+.info .bs{font-size:14px;margin:-6px 0 14px}
+.bcvnote{font-size:12px;color:var(--soft);margin:-4px 0 12px}
 .pcode{display:block;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding:0 2px}
 .info .pcode{font-size:12px;margin:-4px 0 8px}
 .demorib{position:fixed;left:12px;bottom:18px;z-index:35;max-width:calc(100vw - 100px);background:var(--ink);color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
@@ -374,6 +377,7 @@ footer.foot::before{content:"";position:absolute;top:-1px;left:50%;transform:tra
       <h2 id="catalogTitle"></h2>
       <input class="search" id="q" type="search" placeholder="Buscar por nombre o código" aria-label="Buscar">
     </div>
+    <p class="bcvnote" id="bcvNote" hidden></p>
     <div class="chips" id="chips"></div>
     <div class="chips sub" id="subChips" hidden></div>
     <div class="szpick" id="szChips"></div>
@@ -548,7 +552,18 @@ function renderChips(){ renderSizes(); const m=new Map(); products.filter(p=>p.a
   box.hidden=false; box.replaceChildren(...[["Todas","Todas"],...[...sm].sort((a,b)=>a[1].localeCompare(b[1],"es"))].map(([k,t])=>el("button",{class:"chip","aria-pressed":String(k===sub),text:t,onclick(){sub=k;renderChips();renderGrid();}}))); }
 function photo(p, cls){ const ph=()=>el("div",{class:cls||"blank",text:(p.name||"Y")[0]}); if (!(p.images&&p.images[0])) return ph();
   const i=el("img",{src:p.images[0],alt:p.name,loading:"lazy"}); i.addEventListener("error",()=>i.replaceWith(ph()),{once:true}); return i; }
-function priceNode(p){ const d=el("div",{class:"price",text:money(p.price)}); if (p.old_price && Number(p.old_price)>Number(p.price)) d.append(el("s",{text:money(p.old_price)})); return d; }
+/* ---- Tasa BCV: se consulta al abrir y cada 15 min; usa siempre la última publicada (incluye la del día siguiente apenas sale) ---- */
+let BCV=store.get("bk_bcv",null);
+const bsFmt=n=>"Bs. "+(Number(n)||0).toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2});
+const bs=usd=> BCV&&BCV.rate ? bsFmt(Number(usd)*BCV.rate) : "";
+async function loadBCV(){ try{ const r=await fetch("https://ve.dolarapi.com/v1/dolares/oficial",{cache:"no-store"}); if(!r.ok) return; const j=await r.json(); const rate=Number(j.promedio||j.venta);
+  if (!(rate>0)) return; const date=String(j.fechaActualizacion||"").slice(0,10);
+  if (BCV && BCV.date && date && date<BCV.date) return;
+  const changed=!BCV||BCV.rate!==rate||BCV.date!==date; BCV={rate,date}; store.set("bk_bcv",BCV); if (changed){ renderRate(); if (!loading) renderGrid(); } }catch(e){} }
+function renderRate(){ const n=$("#bcvNote"); if(!n) return; if(!(BCV&&BCV.rate)){ n.hidden=true; return; }
+  const d=BCV.date? BCV.date.slice(8,10)+"/"+BCV.date.slice(5,7) : ""; n.hidden=false; n.textContent="Tasa BCV"+(d?" del "+d:"")+": "+bsFmt(BCV.rate)+" por dólar"; }
+function priceNode(p){ const d=el("div",{class:"price",text:money(p.price)}); if (p.old_price && Number(p.old_price)>Number(p.price)) d.append(el("s",{text:money(p.old_price)}));
+  const b=bs(p.price); return b? el("div",{class:"pricewrap"}, d, el("small",{class:"bs",text:b})) : d; }
 function renderGrid(){
   if (loading) return $("#grid").replaceChildren(...Array.from({length:8},()=>el("div",{class:"card sk","aria-hidden":"true"}, el("div",{class:"ph"}), el("i"), el("i"))));
   if (failed) return $("#grid").replaceChildren(el("div",{class:"empty"}, el("p",{text:"No pudimos cargar la colección. Revisa tu conexión."}), el("button",{class:"btn",text:"Intentar de nuevo",onclick:()=>start()})));
@@ -582,12 +597,12 @@ function saveCart(){ store.set("bk_cart",cart); const n=cart.reduce((a,i)=>a+i.q
 function openBag(){
   const body=el("div",{class:"bag"}); const close=sheet(body);
   const draw=()=>{ const total=cart.reduce((a,i)=>a+i.price*i.qty,0);
-    const msg=S.waMsg+"\n"+cart.map(i=>"• "+i.qty+"× "+i.name+(i.code?" [Cód. "+i.code+"]":"")+(i.size?" (Talla "+i.size+")":"")+", "+money(i.price*i.qty)).join("\n")+"\nTotal: "+money(total);
+    const msg=S.waMsg+"\n"+cart.map(i=>"• "+i.qty+"× "+i.name+(i.code?" [Cód. "+i.code+"]":"")+(i.size?" (Talla "+i.size+")":"")+", "+money(i.price*i.qty)).join("\n")+"\nTotal: "+money(total)+(bs(total)?" ("+bs(total)+" a tasa BCV)":"");
     body.replaceChildren(el("h2",{text:"Mi bolsa"}), ...(cart.length? [
       ...cart.map(i=>el("div",{class:"line"}, i.img?el("img",{class:"mini",src:i.img,alt:""}):el("div",{class:"mini",text:i.name[0]}),
         el("div",{}, el("div",{text:i.name}), el("small",{text:(i.code?"Cód. "+i.code+" · ":"")+(i.size?"Talla "+i.size+" · ":"")+money(i.price)})),
         el("div",{class:"qty"}, el("button",{"aria-label":"Quitar uno",text:"−",onclick(){ i.qty--; if(i.qty<1) cart=cart.filter(x=>x!==i); saveCart(); draw(); }}), el("span",{text:i.qty}), el("button",{"aria-label":"Agregar uno",text:"+",onclick(){ i.qty++; saveCart(); draw(); }})))),
-      el("div",{class:"total"}, el("span",{text:"Total"}), el("b",{text:money(total)})),
+      el("div",{class:"total"}, el("span",{text:"Total"}), el("b",{text:money(total)})), bs(total)?el("p",{class:"bs",style:"text-align:right;margin:-6px 0 14px",text:bs(total)+" a tasa BCV"}):null,
       el("a",{class:"btn wa block",href:waLink(msg),target:"_blank",rel:"noopener",text:"Enviar pedido por WhatsApp",onclick(){ track("wa",null); }})
     ] : [el("p",{text:"Tu bolsa está vacía. Elige una prenda y agrégala aquí."}), el("button",{class:"btn block",text:"Ver la colección",onclick:close})])); };
   draw();
@@ -851,6 +866,8 @@ function route(){ const admin = location.hash==="#admin"; $("#store").hidden=adm
 addEventListener("hashchange",route);
 start();
 async function start(){
+  renderRate(); loadBCV(); setInterval(loadBCV, 15*60*1000);
+  document.addEventListener("visibilitychange",()=>{ if (document.visibilityState==="visible") loadBCV(); });
   loading=true; failed=false; renderStore(); route();
   try { await loadData(); } catch(e) { live=false; }
   loading=false; failed=!live; renderStore();
