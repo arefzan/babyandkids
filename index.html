@@ -337,6 +337,7 @@ footer.foot::before{content:"";position:absolute;top:-1px;left:50%;transform:tra
 .chips.sub{padding-top:0;margin-top:-6px}
 .chips.sub .chip{height:32px;font-size:13px;padding:0 14px;border-color:transparent;background:color-mix(in srgb,var(--ink) 5%,transparent)}
 .chips.sub .chip[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+.secpick button{padding:0 16px}
 .pcode{display:block;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding:0 2px}
 .info .pcode{font-size:12px;margin:-4px 0 8px}
 .demorib{position:fixed;left:12px;bottom:18px;z-index:35;max-width:calc(100vw - 100px);background:var(--ink);color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
@@ -769,8 +770,9 @@ function productForm(body,p){
     : el("p",{class:"help",text:"Las tallas están apagadas. Puedes activarlas en Personalizar."});
   const chk=(id,label,key)=>{ const i=el("input",{type:"checkbox",id}); i.checked=!!p[key]; i.onchange=()=>p[key]=i.checked; return el("label",{class:"sw",for:id}, i, label); };
   const form=el("form",{class:"box",async onsubmit(e){ e.preventDefault();
-    const row={name:$("#pn").value.trim(),price:Number($("#pp").value)||0,old_price:$("#po").value?Number($("#po").value):null,category:$("#pc").value.trim(),subcat:$("#psub").value.trim(),code:$("#pcode").value.trim().toUpperCase(),description:$("#pd").value.trim(),images:p.images,sizes:p.sizes||[],featured:!!p.featured,active:!!p.active,sold_out:!!p.sold_out};
+    const row={name:$("#pn").value.trim(),price:Number($("#pp").value)||0,old_price:$("#po").value?Number($("#po").value):null,category:SEC_ORDER.find(c=>ckey(c)===ckey(p.category))||"",subcat:$("#psub").value.trim(),code:$("#pcode").value.trim().toUpperCase(),description:$("#pd").value.trim(),images:p.images,sizes:p.sizes||[],featured:!!p.featured,active:!!p.active,sold_out:!!p.sold_out};
     if (!row.name) return toast("Escribe el nombre de la prenda");
+    if (!row.category) return toast("Elige la sección: Niña, Niño, Conjuntos tejidos o Accesorios");
     row.stock=Math.max(0,parseInt($("#pu").value)||0); if (row.stock===0) row.sold_out=true; else if (!p.id || (p.stock??1)===0) row.sold_out=false;
     const sv=e.target.querySelector(".btn.fill"); if (sv.disabled) return; sv.disabled=true; sv.textContent="Guardando…";
     const fail=m=>{ sv.disabled=false; sv.textContent="Guardar"; toast(m); };
@@ -787,9 +789,8 @@ function productForm(body,p){
     field("pu","Unidades en existencia",p.stock??1,"number",{min:0,step:1,inputmode:"numeric"}),
     field("pk","Costo (solo lo ves tú, no sale en la web)",costs[p.id]??"","number",{min:0,step:"0.01",inputmode:"decimal"}),
     field("pcode","Código (ej. CT-001)",p.code,"text",{maxlength:40,autocapitalize:"characters"}),
-    el("div",{class:"two"}, field("pc","Sección (Niña, Niño, Conjuntos tejidos, Accesorios…)",p.category,"text",{list:"catlist",maxlength:40}),
-      field("psub","Categoría (opcional: Pantalones, Franelas, Conjuntos…)",p.subcat,"text",{list:"sublist",maxlength:40})),
-    el("datalist",{id:"catlist"}, [...new Set([...SEC_ORDER,...cats])].map(c=>el("option",{value:c}))),
+    el("div",{class:"f"}, el("div",{class:"lab",text:"Sección"}), el("div",{class:"sizes secpick"}, SEC_ORDER.map(c=>el("button",{type:"button","aria-pressed":String(ckey(p.category)===ckey(c)),text:c,onclick(e){ p.category=c; e.currentTarget.parentNode.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b===e.currentTarget))); }})))),
+    field("psub","Categoría (opcional: Pantalones, Franelas, Conjuntos…)",p.subcat,"text",{list:"sublist",maxlength:40}),
     el("datalist",{id:"sublist"}, [...new Set(["Pantalones","Franelas","Conjuntos","Vestidos","Shorts","Faldas","Bodys","Pijamas",...products.map(x=>x.subcat).filter(Boolean)])].map(c=>el("option",{value:c}))),
     field("pd","Descripción (opcional)",p.description,"area",{maxlength:600}),
     el("div",{class:"f"}, el("label",{for:"pf",text:"Fotos (hasta 6, la primera es la portada)"}), pics, file),
