@@ -464,10 +464,10 @@ const DEFAULTS = {
   name:"Baby & Kids", announce:"Ropa para bebés y niños · Pide por WhatsApp",
   heroKicker:"", heroTitle:"Pequeños con *mucho estilo*",
   heroText:"Ropa cómoda y bonita para bebés y niños.",
-  heroBtn:"Ver la tienda", catalogTitle:"Conjuntos tejidos",
+  heroBtn:"Ver la tienda", catalogTitle:"Nuestra ropita",
   whatsapp:"584128814213", instagram:"babyandkidtienda", currency:"$",
   waMsg:"Hola Baby & Kids 👶 quiero pedir:", footer:"Ropa de bebé y niños con mucho color.",
-  logo:"", heroImg:"", sizesOn:true, sizeList:"RN, 0-3M, 3-6M, 6-9M, 9-12M, 12-18M, 18-24M, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16", catsOn:false,
+  logo:"", heroImg:"", sizesOn:true, sizeList:"RN, 0-3M, 3-6M, 6-9M, 9-12M, 12-18M, 18-24M, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16", catsOn:true,
   colors:{ bg:"#FFFAF3", ink:"#2A2342", brand:"#E03A7A", lemon:"#FFD200", leaf:"#00A5A8" }
 };
 
@@ -531,7 +531,7 @@ function renderSizes(){ const box=$("#szChips"); const have=new Set(products.fil
   const sel=el("select",{id:"szSel",class:sz!=="Todas"?"on":null,"aria-label":"Filtrar por talla",onchange(){ sz=sel.value; renderSizes(); renderGrid(); }}, ["Todas",...sortSizes(have)].map(k=>el("option",{value:k,text:k==="Todas"?"Todas las tallas":"Talla "+k})));
   sel.value=sz; box.replaceChildren(el("label",{for:"szSel",text:"Filtrar"}), sel); }
 function renderChips(){ renderSizes(); const m=new Map(); products.filter(p=>p.active!==false&&ckey(p.category)).forEach(p=>{ const k=ckey(p.category); if(!m.has(k)) m.set(k,clabel(p.category)); });
-  if (true){ cat="Todo"; $("#chips").replaceChildren(); $("#chips").hidden=true; return; } $("#chips").hidden=false;
+  if (!S.catsOn){ cat="Todo"; $("#chips").replaceChildren(); $("#chips").hidden=true; return; } $("#chips").hidden=false;
   const cats=[["Todo","Todo"],...m]; if (cat!=="Todo" && !m.has(cat)) cat="Todo";
   $("#chips").replaceChildren(...(cats.length>1?[el("span",{class:"flabel",text:"Sección"})]:[]), ...(cats.length>1?cats:[]).map(([k,t])=>el("button",{class:"chip","aria-pressed":String(k===cat),text:t,onclick(){cat=k;renderChips();renderGrid();}}))); }
 function photo(p, cls){ const ph=()=>el("div",{class:cls||"blank",text:(p.name||"Y")[0]}); if (!(p.images&&p.images[0])) return ph();
@@ -560,7 +560,7 @@ function openProduct(p){
   const wa=el("a",{class:"btn wa block",href:waLink(msgOne()),target:"_blank",rel:"noopener",text:"Pedir por WhatsApp",onclick(e){ if(needSize()){e.preventDefault();return;} track("wa", String(p.id).length>10?p.id:null); }});
   const add=el("button",{class:"btn block",text:"Agregar a mi bolsa",onclick(){ if(needSize())return; addToCart(p,size); close(); toast("Agregado a tu bolsa"); }});
   const close=sheet(el("div",{class:"pd"}, el("div",{class:"gal"}, main, thumbs),
-    el("div",{class:"info"}, el("div",{class:"cat",text:"Conjuntos tejidos"}), el("h2",{text:p.name}), p.code?el("div",{class:"pcode",text:"Código: "+p.code}):null, priceNode(p),
+    el("div",{class:"info"}, p.category?el("div",{class:"cat",text:p.category}):null, el("h2",{text:p.name}), p.code?el("div",{class:"pcode",text:"Código: "+p.code}):null, priceNode(p),
       p.description?el("p",{text:p.description}):null, sizeBox,
       p.sold_out? el("button",{class:"btn block",disabled:true,text:"Agotado"}) : [wa, add])));
 }
@@ -758,7 +758,7 @@ function productForm(body,p){
     : el("p",{class:"help",text:"Las tallas están apagadas. Puedes activarlas en Personalizar."});
   const chk=(id,label,key)=>{ const i=el("input",{type:"checkbox",id}); i.checked=!!p[key]; i.onchange=()=>p[key]=i.checked; return el("label",{class:"sw",for:id}, i, label); };
   const form=el("form",{class:"box",async onsubmit(e){ e.preventDefault();
-    const row={name:$("#pn").value.trim(),price:Number($("#pp").value)||0,old_price:$("#po").value?Number($("#po").value):null,category:"Conjuntos tejidos",code:$("#pcode").value.trim().toUpperCase(),description:$("#pd").value.trim(),images:p.images,sizes:p.sizes||[],featured:!!p.featured,active:!!p.active,sold_out:!!p.sold_out};
+    const row={name:$("#pn").value.trim(),price:Number($("#pp").value)||0,old_price:$("#po").value?Number($("#po").value):null,category:$("#pc").value.trim(),code:$("#pcode").value.trim().toUpperCase(),description:$("#pd").value.trim(),images:p.images,sizes:p.sizes||[],featured:!!p.featured,active:!!p.active,sold_out:!!p.sold_out};
     if (!row.name) return toast("Escribe el nombre de la prenda");
     row.stock=Math.max(0,parseInt($("#pu").value)||0); if (row.stock===0) row.sold_out=true; else if (!p.id || (p.stock??1)===0) row.sold_out=false;
     const sv=e.target.querySelector(".btn.fill"); if (sv.disabled) return; sv.disabled=true; sv.textContent="Guardando…";
@@ -776,6 +776,7 @@ function productForm(body,p){
     field("pu","Unidades en existencia",p.stock??1,"number",{min:0,step:1,inputmode:"numeric"}),
     field("pk","Costo (solo lo ves tú, no sale en la web)",costs[p.id]??"","number",{min:0,step:"0.01",inputmode:"decimal"}),
     field("pcode","Código (ej. CT-001)",p.code,"text",{maxlength:40,autocapitalize:"characters"}),
+    field("pc","Sección (elige una o escribe una nueva: Conjuntos tejidos, Bodys, Vestidos…)",p.id?p.category:(p.category||"Conjuntos tejidos"),"text",{list:"catlist",maxlength:40}), el("datalist",{id:"catlist"}, [...new Set(["Conjuntos tejidos",...cats])].map(c=>el("option",{value:c}))),
     field("pd","Descripción (opcional)",p.description,"area",{maxlength:600}),
     el("div",{class:"f"}, el("label",{for:"pf",text:"Fotos (hasta 6, la primera es la portada)"}), pics, file),
     sizeBox, chk("ca","En la web (desmárcala para deshabilitarla)","active"), chk("cf","Destacada (aparece primero)","featured"), chk("cs","Agotada","sold_out"),
@@ -798,6 +799,7 @@ function tabLook(body){
     mergeSettings(draft); renderStore(); renderAdmin(); toast("Cambios guardados"); }},
     el("div",{class:"box"}, el("h2",{text:"Textos y contacto"}), T.map(([k,l,t])=>field("s_"+k,l,draft[k],t))),
     el("div",{class:"box"}, el("h2",{text:"Imágenes"}), imgField("logo","Logo (PNG sin fondo se ve mejor)",600,true), imgField("heroImg","Foto de portada (opcional, aparece al lado del título)",1400,false)),
+    el("div",{class:"box"}, el("h2",{text:"Secciones en la tienda"}), el("label",{class:"sw",for:"ctOn"}, ct, "Mostrar los botones de sección (Conjuntos tejidos, Bodys…)"), el("p",{class:"help",style:"margin:0",text:"Las secciones salen solas de las prendas: para crear una nueva, escribe su nombre en el campo Sección al editar una prenda."})),
     el("div",{class:"box"}, el("h2",{text:"Colores"}), el("div",{class:"colors"}, C.map(([k,l])=>{ const i=el("input",{type:"color",id:"c_"+k}); i.value=draft.colors[k]; return el("label",{for:"c_"+k}, l, i); })),
       el("button",{type:"button",class:"pill",style:"margin-top:14px",text:"Volver a los colores del logo",onclick(){ for (const [k] of C) $("#c_"+k).value=DEFAULTS.colors[k]; }})),
     el("div",{class:"box"}, el("h2",{text:"Tallas"}), el("label",{class:"sw",for:"szOn"}, sz, "Activar tallas en la tienda"), field("s_sizeList","Tallas que manejas, separadas por coma",draft.sizeList), el("p",{class:"help",style:"margin:0",text:"Con las tallas activas, cada prenda te deja marcar cuáles tiene y el cliente elige una antes de pedir."})),
