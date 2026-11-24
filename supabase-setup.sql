@@ -63,3 +63,6 @@ create policy "bk borrar fotos" on storage.objects for delete to authenticated u
 --   correo: aref_daniel.com@hotmail.com  · contraseña: la que quieras · marca "Auto Confirm User"
 -- y luego corre esta línea para hacerlo administrador:
 -- insert into public.bk_admins(user_id) select id from auth.users where email = 'aref_daniel.com@hotmail.com';
+
+-- Códigos de producto (agregado después):
+alter table public.bk_products add column if not exists code text default '';
