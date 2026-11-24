@@ -66,3 +66,6 @@ create policy "bk borrar fotos" on storage.objects for delete to authenticated u
 
 -- Códigos de producto (agregado después):
 alter table public.bk_products add column if not exists code text default '';
+
+-- Categorías dentro de cada sección (agregado después):
+alter table public.bk_products add column if not exists subcat text default '';

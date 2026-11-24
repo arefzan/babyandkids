@@ -334,6 +334,9 @@ footer.foot::before{content:"";position:absolute;top:-1px;left:50%;transform:tra
 .hero.solo .cta{display:none}
 .hero.solo + .catalog{padding-top:28px}
 @media(max-width:760px){ .hero.solo .wrap{padding-top:32px;padding-bottom:22px} .btn{padding:0 22px} }
+.chips.sub{padding-top:0;margin-top:-6px}
+.chips.sub .chip{height:32px;font-size:13px;padding:0 14px;border-color:transparent;background:color-mix(in srgb,var(--ink) 5%,transparent)}
+.chips.sub .chip[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
 .pcode{display:block;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding:0 2px}
 .info .pcode{font-size:12px;margin:-4px 0 8px}
 .demorib{position:fixed;left:12px;bottom:18px;z-index:35;max-width:calc(100vw - 100px);background:var(--ink);color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
@@ -371,6 +374,7 @@ footer.foot::before{content:"";position:absolute;top:-1px;left:50%;transform:tra
       <input class="search" id="q" type="search" placeholder="Buscar por nombre o código" aria-label="Buscar">
     </div>
     <div class="chips" id="chips"></div>
+    <div class="chips sub" id="subChips" hidden></div>
     <div class="szpick" id="szChips"></div>
     <div class="grid" id="grid"></div>
   </div></main>
@@ -409,16 +413,17 @@ function bkDemoClient(){
   const D={
     bk_settings:[{id:1,data:{}}],
     bk_products:[
-      P("Conjunto short y franela",18,"Conjuntos",["6-9M","12-18M","2","4"],art("tee","#FBE0EB","#E03A7A"),{featured:true,description:"Conjunto de algodón, fresco y cómodo para jugar."}),
-      P("Franela de rayas",9,"Franelas",["2","4","6","8"],art("tee","#D9F1F1","#00A5A8")),
-      P("Vestido de flores",20,"Vestidos",["2","4","6","8"],art("dress","#FFF4BF","#E03A7A"),{old_price:25}),
-      P("Pantalón jogger",14,"Pantalones",["4","6","8","10"],art("pj","#D9F1F1","#FFD200")),
-      P("Body manga corta",10,"Bodys",["RN","0-3M","3-6M"],art("body","#FFF4BF","#00A5A8"),{sold_out:true,stock:0}),
-      P("Franela básica",8,"Franelas",["2","4","6"],art("tee","#FBE0EB","#FFD200")),
-      P("Vestido de fiesta",28,"Vestidos",["6","8","10","12"],art("dress","#D9F1F1","#00A5A8"),{featured:true}),
-      P("Medias pack x3",6,"Medias",["0-3M","2","4","6"],art("bow","#FBE0EB","#00A5A8"),{stock:10}),
-      P("Correa infantil",7,"Correas",[],art("bow","#FFF4BF","#E03A7A"),{stock:5})],
+      P("Conjunto short y franela",18,"Niño",["6-9M","12-18M","2","4"],art("tee","#FBE0EB","#E03A7A"),{featured:true,description:"Conjunto de algodón, fresco y cómodo para jugar."}),
+      P("Franela de rayas",9,"Niño",["2","4","6","8"],art("tee","#D9F1F1","#00A5A8")),
+      P("Vestido de flores",20,"Niña",["2","4","6","8"],art("dress","#FFF4BF","#E03A7A"),{old_price:25}),
+      P("Pantalón jogger",14,"Niño",["4","6","8","10"],art("pj","#D9F1F1","#FFD200")),
+      P("Conjunto tejido rosa",22,"Conjuntos tejidos",["RN","0-3M","3-6M"],art("body","#FFF4BF","#00A5A8"),{sold_out:true,stock:0}),
+      P("Franela básica",8,"Niña",["2","4","6"],art("tee","#FBE0EB","#FFD200")),
+      P("Vestido de fiesta",28,"Niña",["6","8","10","12"],art("dress","#D9F1F1","#00A5A8"),{featured:true}),
+      P("Medias pack x3",6,"Accesorios",["0-3M","2","4","6"],art("bow","#FBE0EB","#00A5A8"),{stock:10}),
+      P("Correa infantil",7,"Accesorios",[],art("bow","#FFF4BF","#E03A7A"),{stock:5})],
     bk_costs:[], bk_sales:[], bk_visits:[], bk_admins:[] };
+  D.bk_products.forEach(p=>{ p.subcat=/Vestido/.test(p.name)?"Vestidos":/Franela/.test(p.name)?"Franelas":/Pantal/.test(p.name)?"Pantalones":/Conjunto short/.test(p.name)?"Conjuntos":/Medias/.test(p.name)?"Medias":""; });
   D.bk_products.forEach((p,i)=>D.bk_costs.push({product_id:p.id,cost:Math.round(p.price*0.55)}));
   const today=new Date().toLocaleDateString("en-CA",{timeZone:"America/Caracas"});
   const dayAgo=k=>{ const d=new Date(today+"T12:00:00Z"); d.setUTCDate(d.getUTCDate()-k); return d.toISOString().slice(0,10); };
@@ -480,7 +485,7 @@ const el = (tag, attrs={}, ...kids) => { const n=document.createElement(tag);
 const esc = s => String(s??"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store = { get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v);}catch(e){return d;} }, set(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} } };
 
-let sb=null, live=false, loading=true, failed=false, S=structuredClone(DEFAULTS), products=[], cat="Todo", sz="Todas", cart=store.get("bk_cart",[]), isAdmin=false;
+let sb=null, live=false, loading=true, failed=false, S=structuredClone(DEFAULTS), products=[], cat="Todo", sub="Todas", sz="Todas", cart=store.get("bk_cart",[]), isAdmin=false;
 const DEMO = CFG.url.startsWith("__");
 try { if (DEMO) sb = bkDemoClient(); else if (window.supabase) sb = window.supabase.createClient(CFG.url, CFG.key); } catch(e) {}
 
@@ -522,7 +527,7 @@ function applySettings(){
 const ckey=c=>String(c||"").trim().toLowerCase();
 const clabel=c=>{ c=String(c||"").trim(); return c.charAt(0).toUpperCase()+c.slice(1); };
 function visible(){ const q=$("#q").value.trim().toLowerCase();
-  return products.filter(p=>p.active!==false && (cat==="Todo"||ckey(p.category)===cat) && (sz==="Todas"||!S.sizesOn||(p.sizes||[]).includes(sz)) && (!q || (p.name+" "+(p.code||"")).toLowerCase().includes(q)))
+  return products.filter(p=>p.active!==false && (cat==="Todo"||ckey(p.category)===cat) && (sub==="Todas"||ckey(p.subcat)===sub) && (sz==="Todas"||!S.sizesOn||(p.sizes||[]).includes(sz)) && (!q || (p.name+" "+(p.code||"")+" "+(p.category||"")+" "+(p.subcat||"")).toLowerCase().includes(q)))
     .sort((a,b)=>(b.featured?1:0)-(a.featured?1:0)); }
 const sizeOrder=()=>String(S.sizeList).split(",").map(x=>x.trim()).filter(Boolean);
 function sortSizes(arr){ const o=sizeOrder(); return [...arr].sort((a,b)=>{ const i=o.indexOf(a), j=o.indexOf(b); return (i<0?999:i)-(j<0?999:j) || String(a).localeCompare(String(b),"es",{numeric:true}); }); }
@@ -530,10 +535,16 @@ function renderSizes(){ const box=$("#szChips"); const have=new Set(products.fil
   if (!S.sizesOn || !have.size){ sz="Todas"; box.replaceChildren(); box.hidden=true; return; } box.hidden=false; if (sz!=="Todas" && !have.has(sz)) sz="Todas";
   const sel=el("select",{id:"szSel",class:sz!=="Todas"?"on":null,"aria-label":"Filtrar por talla",onchange(){ sz=sel.value; renderSizes(); renderGrid(); }}, ["Todas",...sortSizes(have)].map(k=>el("option",{value:k,text:k==="Todas"?"Todas las tallas":"Talla "+k})));
   sel.value=sz; box.replaceChildren(el("label",{for:"szSel",text:"Filtrar"}), sel); }
+const SEC_ORDER=["Niña","Niño","Conjuntos tejidos","Accesorios"];
+const secRank=k=>{ const i=SEC_ORDER.map(ckey).indexOf(k); return i<0?99:i; };
 function renderChips(){ renderSizes(); const m=new Map(); products.filter(p=>p.active!==false&&ckey(p.category)).forEach(p=>{ const k=ckey(p.category); if(!m.has(k)) m.set(k,clabel(p.category)); });
-  if (!S.catsOn){ cat="Todo"; $("#chips").replaceChildren(); $("#chips").hidden=true; return; } $("#chips").hidden=false;
-  const cats=[["Todo","Todo"],...m]; if (cat!=="Todo" && !m.has(cat)) cat="Todo";
-  $("#chips").replaceChildren(...(cats.length>1?[el("span",{class:"flabel",text:"Sección"})]:[]), ...(cats.length>1?cats:[]).map(([k,t])=>el("button",{class:"chip","aria-pressed":String(k===cat),text:t,onclick(){cat=k;renderChips();renderGrid();}}))); }
+  const box=$("#subChips");
+  if (!S.catsOn){ cat="Todo"; sub="Todas"; $("#chips").replaceChildren(); $("#chips").hidden=true; box.hidden=true; return; } $("#chips").hidden=false;
+  const secs=[...m].sort((a,b)=>secRank(a[0])-secRank(b[0])); const cats=[["Todo","Todo"],...secs]; if (cat!=="Todo" && !m.has(cat)) cat="Todo";
+  $("#chips").replaceChildren(...(cats.length>1?[el("span",{class:"flabel",text:"Sección"})]:[]), ...(cats.length>1?cats:[]).map(([k,t])=>el("button",{class:"chip","aria-pressed":String(k===cat),text:t,onclick(){cat=k;sub="Todas";renderChips();renderGrid();}})));
+  const sm=new Map(); if (cat!=="Todo") products.filter(p=>p.active!==false&&ckey(p.category)===cat&&ckey(p.subcat)).forEach(p=>{ const k=ckey(p.subcat); if(!sm.has(k)) sm.set(k,clabel(p.subcat)); });
+  if (sm.size<1){ sub="Todas"; box.hidden=true; box.replaceChildren(); return; } if (sub!=="Todas" && !sm.has(sub)) sub="Todas";
+  box.hidden=false; box.replaceChildren(...[["Todas","Todas"],...[...sm].sort((a,b)=>a[1].localeCompare(b[1],"es"))].map(([k,t])=>el("button",{class:"chip","aria-pressed":String(k===sub),text:t,onclick(){sub=k;renderChips();renderGrid();}}))); }
 function photo(p, cls){ const ph=()=>el("div",{class:cls||"blank",text:(p.name||"Y")[0]}); if (!(p.images&&p.images[0])) return ph();
   const i=el("img",{src:p.images[0],alt:p.name,loading:"lazy"}); i.addEventListener("error",()=>i.replaceWith(ph()),{once:true}); return i; }
 function priceNode(p){ const d=el("div",{class:"price",text:money(p.price)}); if (p.old_price && Number(p.old_price)>Number(p.price)) d.append(el("s",{text:money(p.old_price)})); return d; }
@@ -560,7 +571,7 @@ function openProduct(p){
   const wa=el("a",{class:"btn wa block",href:waLink(msgOne()),target:"_blank",rel:"noopener",text:"Pedir por WhatsApp",onclick(e){ if(needSize()){e.preventDefault();return;} track("wa", String(p.id).length>10?p.id:null); }});
   const add=el("button",{class:"btn block",text:"Agregar a mi bolsa",onclick(){ if(needSize())return; addToCart(p,size); close(); toast("Agregado a tu bolsa"); }});
   const close=sheet(el("div",{class:"pd"}, el("div",{class:"gal"}, main, thumbs),
-    el("div",{class:"info"}, p.category?el("div",{class:"cat",text:p.category}):null, el("h2",{text:p.name}), p.code?el("div",{class:"pcode",text:"Código: "+p.code}):null, priceNode(p),
+    el("div",{class:"info"}, p.category?el("div",{class:"cat",text:p.category+(p.subcat?" · "+p.subcat:"")}):null, el("h2",{text:p.name}), p.code?el("div",{class:"pcode",text:"Código: "+p.code}):null, priceNode(p),
       p.description?el("p",{text:p.description}):null, sizeBox,
       p.sold_out? el("button",{class:"btn block",disabled:true,text:"Agotado"}) : [wa, add])));
 }
@@ -652,7 +663,7 @@ function tabProducts(body){
       const {error}=await sb.from("bk_products").delete().eq("id",p.id); if(error) return toast("No se pudo borrar"); dropImages(p.images, p.id); await refresh(); renderAdmin(); toast("Prenda borrada"); }});
     const c=costs[p.id]; const g=c==null?null:Number(p.price)-c;
     list.append(el("div",{class:"row"}, p.images&&p.images[0]?el("img",{src:p.images[0],alt:""}):el("div",{class:"mini",text:(p.name||"Y")[0]}),
-      el("div",{class:"meta"}, el("b",{text:p.name+" · "+money(p.price)}), el("small",{text:(p.code?"Cód. "+p.code+" · ":"")+(p.stock??1)+((p.stock??1)===1?" unidad":" unidades")}),
+      el("div",{class:"meta"}, el("b",{text:p.name+" · "+money(p.price)}), el("small",{text:[p.category,p.subcat].filter(Boolean).join(" › ")+(p.category?" · ":"")+(p.code?"Cód. "+p.code+" · ":"")+(p.stock??1)+((p.stock??1)===1?" unidad":" unidades")}),
         c==null? el("small",{text:"Sin costo cargado"}) : el("small",{}, "Costo "+money(c)+" · ", el("span",{class:g>=0?"gain":"loss",text:"Ganas "+money(g)})),
         el("div",{class:"acts"}, el("button",{class:"pill sell",text:"Vender",onclick:()=>saleSheet(p)}),
           el("button",{class:"pill",text:"Editar",onclick(){ editing=structuredClone(p); renderAdmin(); }}),
@@ -758,13 +769,13 @@ function productForm(body,p){
     : el("p",{class:"help",text:"Las tallas están apagadas. Puedes activarlas en Personalizar."});
   const chk=(id,label,key)=>{ const i=el("input",{type:"checkbox",id}); i.checked=!!p[key]; i.onchange=()=>p[key]=i.checked; return el("label",{class:"sw",for:id}, i, label); };
   const form=el("form",{class:"box",async onsubmit(e){ e.preventDefault();
-    const row={name:$("#pn").value.trim(),price:Number($("#pp").value)||0,old_price:$("#po").value?Number($("#po").value):null,category:$("#pc").value.trim(),code:$("#pcode").value.trim().toUpperCase(),description:$("#pd").value.trim(),images:p.images,sizes:p.sizes||[],featured:!!p.featured,active:!!p.active,sold_out:!!p.sold_out};
+    const row={name:$("#pn").value.trim(),price:Number($("#pp").value)||0,old_price:$("#po").value?Number($("#po").value):null,category:$("#pc").value.trim(),subcat:$("#psub").value.trim(),code:$("#pcode").value.trim().toUpperCase(),description:$("#pd").value.trim(),images:p.images,sizes:p.sizes||[],featured:!!p.featured,active:!!p.active,sold_out:!!p.sold_out};
     if (!row.name) return toast("Escribe el nombre de la prenda");
     row.stock=Math.max(0,parseInt($("#pu").value)||0); if (row.stock===0) row.sold_out=true; else if (!p.id || (p.stock??1)===0) row.sold_out=false;
     const sv=e.target.querySelector(".btn.fill"); if (sv.disabled) return; sv.disabled=true; sv.textContent="Guardando…";
     const fail=m=>{ sv.disabled=false; sv.textContent="Guardar"; toast(m); };
     let id=p.id;
-    const why=err=>/code/i.test(err.message||"")?"Falta activar los códigos en Supabase (corre la línea SQL)":"No se pudo guardar. Revisa tu conexión.";
+    const why=err=>/code|subcat/i.test(err.message||"")?"Falta activar los códigos en Supabase (corre la línea SQL)":"No se pudo guardar. Revisa tu conexión.";
     if (id){ const {error}=await sb.from("bk_products").update(row).eq("id",id); if (error) return fail(why(error)); }
     else { const {data,error}=await sb.from("bk_products").insert(row).select("id").single(); if (error) return fail(why(error)); id=data.id; }
     const cv=$("#pk").value;
@@ -776,7 +787,10 @@ function productForm(body,p){
     field("pu","Unidades en existencia",p.stock??1,"number",{min:0,step:1,inputmode:"numeric"}),
     field("pk","Costo (solo lo ves tú, no sale en la web)",costs[p.id]??"","number",{min:0,step:"0.01",inputmode:"decimal"}),
     field("pcode","Código (ej. CT-001)",p.code,"text",{maxlength:40,autocapitalize:"characters"}),
-    field("pc","Sección (elige una o escribe una nueva: Conjuntos tejidos, Bodys, Vestidos…)",p.id?p.category:(p.category||"Conjuntos tejidos"),"text",{list:"catlist",maxlength:40}), el("datalist",{id:"catlist"}, [...new Set(["Conjuntos tejidos",...cats])].map(c=>el("option",{value:c}))),
+    el("div",{class:"two"}, field("pc","Sección (Niña, Niño, Conjuntos tejidos, Accesorios…)",p.category,"text",{list:"catlist",maxlength:40}),
+      field("psub","Categoría (opcional: Pantalones, Franelas, Conjuntos…)",p.subcat,"text",{list:"sublist",maxlength:40})),
+    el("datalist",{id:"catlist"}, [...new Set([...SEC_ORDER,...cats])].map(c=>el("option",{value:c}))),
+    el("datalist",{id:"sublist"}, [...new Set(["Pantalones","Franelas","Conjuntos","Vestidos","Shorts","Faldas","Bodys","Pijamas",...products.map(x=>x.subcat).filter(Boolean)])].map(c=>el("option",{value:c}))),
     field("pd","Descripción (opcional)",p.description,"area",{maxlength:600}),
     el("div",{class:"f"}, el("label",{for:"pf",text:"Fotos (hasta 6, la primera es la portada)"}), pics, file),
     sizeBox, chk("ca","En la web (desmárcala para deshabilitarla)","active"), chk("cf","Destacada (aparece primero)","featured"), chk("cs","Agotada","sold_out"),
@@ -799,7 +813,7 @@ function tabLook(body){
     mergeSettings(draft); renderStore(); renderAdmin(); toast("Cambios guardados"); }},
     el("div",{class:"box"}, el("h2",{text:"Textos y contacto"}), T.map(([k,l,t])=>field("s_"+k,l,draft[k],t))),
     el("div",{class:"box"}, el("h2",{text:"Imágenes"}), imgField("logo","Logo (PNG sin fondo se ve mejor)",600,true), imgField("heroImg","Foto de portada (opcional, aparece al lado del título)",1400,false)),
-    el("div",{class:"box"}, el("h2",{text:"Secciones en la tienda"}), el("label",{class:"sw",for:"ctOn"}, ct, "Mostrar los botones de sección (Conjuntos tejidos, Bodys…)"), el("p",{class:"help",style:"margin:0",text:"Las secciones salen solas de las prendas: para crear una nueva, escribe su nombre en el campo Sección al editar una prenda."})),
+    el("div",{class:"box"}, el("h2",{text:"Secciones en la tienda"}), el("label",{class:"sw",for:"ctOn"}, ct, "Mostrar los botones de sección (Niña, Niño, Conjuntos tejidos, Accesorios)"), el("p",{class:"help",style:"margin:0",text:"Las secciones salen solas de las prendas: para crear una nueva, escribe su nombre en el campo Sección al editar una prenda."})),
     el("div",{class:"box"}, el("h2",{text:"Colores"}), el("div",{class:"colors"}, C.map(([k,l])=>{ const i=el("input",{type:"color",id:"c_"+k}); i.value=draft.colors[k]; return el("label",{for:"c_"+k}, l, i); })),
       el("button",{type:"button",class:"pill",style:"margin-top:14px",text:"Volver a los colores del logo",onclick(){ for (const [k] of C) $("#c_"+k).value=DEFAULTS.colors[k]; }})),
     el("div",{class:"box"}, el("h2",{text:"Tallas"}), el("label",{class:"sw",for:"szOn"}, sz, "Activar tallas en la tienda"), field("s_sizeList","Tallas que manejas, separadas por coma",draft.sizeList), el("p",{class:"help",style:"margin:0",text:"Con las tallas activas, cada prenda te deja marcar cuáles tiene y el cliente elige una antes de pedir."})),
