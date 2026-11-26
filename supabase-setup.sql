@@ -69,3 +69,6 @@ alter table public.bk_products add column if not exists code text default '';
 
 -- Categorías dentro de cada sección (agregado después):
 alter table public.bk_products add column if not exists subcat text default '';
+
+-- Colores por prenda (agregado después):
+alter table public.bk_products add column if not exists colors text[] default '{}';

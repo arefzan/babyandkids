@@ -341,6 +341,14 @@ footer.foot::before{content:"";position:absolute;top:-1px;left:50%;transform:tra
 .bs{display:block;font-size:12px;color:var(--soft);font-weight:500;margin-top:2px}
 .info .bs{font-size:14px;margin:-6px 0 14px}
 .bcvnote{font-size:12px;color:var(--soft);margin:-4px 0 12px}
+.cdot{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid rgba(42,35,66,.25);flex:none}
+.ph{position:relative}
+.ctag{position:absolute;left:8px;bottom:8px;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.94);color:var(--ink);font-size:11px;font-weight:700;padding:5px 10px 5px 6px;border-radius:999px;box-shadow:0 2px 8px rgba(42,35,66,.12)}
+.cstack{display:inline-flex}
+.cstack .cdot+.cdot{margin-left:-4px}
+.cdots{display:flex;gap:4px;flex-wrap:wrap;padding:2px 2px 0}
+.colorpick button{display:inline-flex;align-items:center;gap:8px;padding:0 14px}
+.colorpick button .cdot{width:14px;height:14px}
 .pcode{display:block;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding:0 2px}
 .info .pcode{font-size:12px;margin:-4px 0 8px}
 .demorib{position:fixed;left:12px;bottom:18px;z-index:35;max-width:calc(100vw - 100px);background:var(--ink);color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
@@ -569,38 +577,44 @@ function renderGrid(){
   if (failed) return $("#grid").replaceChildren(el("div",{class:"empty"}, el("p",{text:"No pudimos cargar la colección. Revisa tu conexión."}), el("button",{class:"btn",text:"Intentar de nuevo",onclick:()=>start()})));
   const list=visible();
   $("#grid").replaceChildren(...(list.length? list.map(p=>el("button",{class:"card",onclick(){openProduct(p);}},
-    el("div",{class:"ph"}, photo(p), p.sold_out?el("span",{class:"tag out",text:"Agotado"}): (p.old_price&&Number(p.old_price)>Number(p.price))?el("span",{class:"tag",text:"Oferta"}): p.featured?el("span",{class:"tag",text:"Nuevo"}):null),
-    p.code?el("small",{class:"pcode",text:"Cód. "+p.code}):null, el("h3",{text:p.name}), (S.sizesOn&&p.sizes&&p.sizes.length)?el("small",{class:"szl",text:"Tallas: "+sortSizes(p.sizes).join(" · ")}):null, priceNode(p)))
+    el("div",{class:"ph"}, photo(p), p.sold_out?el("span",{class:"tag out",text:"Agotado"}): (p.old_price&&Number(p.old_price)>Number(p.price))?el("span",{class:"tag",text:"Oferta"}): p.featured?el("span",{class:"tag",text:"Nuevo"}):null,
+      pColors(p).length>1?el("span",{class:"ctag"}, el("span",{class:"cstack"}, pColors(p).slice(0,4).map(dot)), pColors(p).length+" colores"):null),
+    p.code?el("small",{class:"pcode",text:"Cód. "+p.code}):null, el("h3",{text:p.name}), pColors(p).length?el("div",{class:"cdots"}, pColors(p).slice(0,8).map(dot)):null, (S.sizesOn&&p.sizes&&p.sizes.length)?el("small",{class:"szl",text:"Tallas: "+sortSizes(p.sizes).join(" · ")}):null, priceNode(p)))
     : [el("p",{class:"empty",text: products.length?"No encontramos prendas con ese filtro.":"Pronto verás aquí la nueva colección."})])); }
 function sheet(content, cls){ const veil=el("div",{class:"veil",onclick(e){ if(e.target===veil) close(); }});
   const close=()=>{veil.remove(); document.body.style.overflow="";};
   veil.append(el("div",{class:"sheet "+(cls||""),role:"dialog","aria-modal":"true"}, el("button",{class:"x","aria-label":"Cerrar",text:"✕",onclick:close}), content));
   $("#layer").append(veil); document.body.style.overflow="hidden"; return close; }
+const COLORS=[["Blanco","#FFFFFF"],["Negro","#222222"],["Gris","#9CA3AF"],["Beige","#E8D8BE"],["Marrón","#8B5E3C"],["Rosado","#F4A7C0"],["Fucsia","#E03A7A"],["Rojo","#D93636"],["Naranja","#F28C28"],["Amarillo","#FFD200"],["Verde","#3FA34D"],["Menta","#A8E6CF"],["Celeste","#8FD3F4"],["Azul","#2F6FD6"],["Azul marino","#1F2A5A"],["Lila","#C8A2E8"],["Morado","#7B3FA0"],["Multicolor","conic-gradient(#E03A7A,#FFD200,#3FA34D,#2F6FD6,#7B3FA0,#E03A7A)"]];
+const colorHex=c=>(COLORS.find(x=>x[0]===c)||[c,"#ddd"])[1];
+const dot=c=>el("i",{class:"cdot",style:"background:"+colorHex(c),title:c});
+const pColors=p=>(Array.isArray(p.colors)?p.colors:[]).filter(Boolean);
 function openProduct(p){
   track("product", String(p.id).length>10?p.id:null);
-  let size=null; const useSizes = S.sizesOn && p.sizes && p.sizes.length;
+  let size=null, color=null; const useSizes = S.sizesOn && p.sizes && p.sizes.length; const cols=pColors(p);
   const imgs=p.images||[]; const main = imgs.length? el("img",{class:"main",src:imgs[0],alt:p.name}) : el("div",{class:"blank",text:p.name[0]});
   const thumbs = imgs.length>1 ? el("div",{class:"thumbs"}, imgs.map((u,i)=>el("button",{"aria-current":String(i===0),"aria-label":"Foto "+(i+1),onclick(e){ main.src=u; thumbs.querySelectorAll("button").forEach(b=>b.setAttribute("aria-current","false")); e.currentTarget.setAttribute("aria-current","true"); }}, el("img",{src:u,alt:""})))) : null;
   const sizeBox = useSizes ? el("div",{}, el("div",{class:"lbl",text:"Talla"}), el("div",{class:"sizes",style:"margin-top:8px"}, sortSizes(p.sizes).map(s=>el("button",{"aria-pressed":"false",text:s,onclick(e){ size=s; e.currentTarget.parentNode.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b===e.currentTarget))); wa.href=waLink(msgOne()); }})))) : null;
-  const msgOne=()=> S.waMsg+"\n• "+p.name+(p.code?" [Cód. "+p.code+"]":"")+(size?" (Talla "+size+")":"")+", "+money(p.price);
-  const needSize=()=>{ if (useSizes && !size){ toast("Elige tu talla"); return true; } return false; };
+  const colorBox = cols.length ? el("div",{}, el("div",{class:"lbl",text:"Color"}), el("div",{class:"sizes colorpick",style:"margin-top:8px"}, cols.map(c=>el("button",{"aria-pressed":"false",onclick(e){ color=c; e.currentTarget.parentNode.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b===e.currentTarget))); wa.href=waLink(msgOne()); }}, dot(c), c)))) : null;
+  const msgOne=()=> S.waMsg+"\n• "+p.name+(p.code?" [Cód. "+p.code+"]":"")+(color?" (Color "+color+")":"")+(size?" (Talla "+size+")":"")+", "+money(p.price);
+  const needSize=()=>{ if (cols.length && !color){ toast("Elige el color"); return true; } if (useSizes && !size){ toast("Elige tu talla"); return true; } return false; };
   const wa=el("a",{class:"btn wa block",href:waLink(msgOne()),target:"_blank",rel:"noopener",text:"Pedir por WhatsApp",onclick(e){ if(needSize()){e.preventDefault();return;} track("wa", String(p.id).length>10?p.id:null); }});
-  const add=el("button",{class:"btn block",text:"Agregar a mi bolsa",onclick(){ if(needSize())return; addToCart(p,size); close(); toast("Agregado a tu bolsa"); }});
+  const add=el("button",{class:"btn block",text:"Agregar a mi bolsa",onclick(){ if(needSize())return; addToCart(p,size,color); close(); toast("Agregado a tu bolsa"); }});
   const close=sheet(el("div",{class:"pd"}, el("div",{class:"gal"}, main, thumbs),
     el("div",{class:"info"}, p.category?el("div",{class:"cat",text:p.category+(p.subcat?" · "+p.subcat:"")}):null, el("h2",{text:p.name}), p.code?el("div",{class:"pcode",text:"Código: "+p.code}):null, priceNode(p),
-      p.description?el("p",{text:p.description}):null, sizeBox,
+      p.description?el("p",{text:p.description}):null, colorBox, sizeBox,
       p.sold_out? el("button",{class:"btn block",disabled:true,text:"Agotado"}) : [wa, add])));
 }
-function addToCart(p,size){ const k=p.id+"|"+(size||""); const it=cart.find(i=>i.k===k);
-  if (it) it.qty++; else cart.push({k,id:p.id,name:p.name,code:p.code||"",price:Number(p.price),size:size||"",img:(p.images||[])[0]||"",qty:1}); saveCart(); }
+function addToCart(p,size,color){ const k=p.id+"|"+(size||"")+"|"+(color||""); const it=cart.find(i=>i.k===k);
+  if (it) it.qty++; else cart.push({k,id:p.id,name:p.name,code:p.code||"",price:Number(p.price),size:size||"",color:color||"",img:(p.images||[])[0]||"",qty:1}); saveCart(); }
 function saveCart(){ store.set("bk_cart",cart); const n=cart.reduce((a,i)=>a+i.qty,0); $("#bagN").textContent=n; $("#bagN").hidden=!n; }
 function openBag(){
   const body=el("div",{class:"bag"}); const close=sheet(body);
   const draw=()=>{ const total=cart.reduce((a,i)=>a+i.price*i.qty,0);
-    const msg=S.waMsg+"\n"+cart.map(i=>"• "+i.qty+"× "+i.name+(i.code?" [Cód. "+i.code+"]":"")+(i.size?" (Talla "+i.size+")":"")+", "+money(i.price*i.qty)).join("\n")+"\nTotal: "+money(total)+(bs(total)?" ("+bs(total)+" a tasa BCV)":"");
+    const msg=S.waMsg+"\n"+cart.map(i=>"• "+i.qty+"× "+i.name+(i.code?" [Cód. "+i.code+"]":"")+(i.color?" (Color "+i.color+")":"")+(i.size?" (Talla "+i.size+")":"")+", "+money(i.price*i.qty)).join("\n")+"\nTotal: "+money(total)+(bs(total)?" ("+bs(total)+" a tasa BCV)":"");
     body.replaceChildren(el("h2",{text:"Mi bolsa"}), ...(cart.length? [
       ...cart.map(i=>el("div",{class:"line"}, i.img?el("img",{class:"mini",src:i.img,alt:""}):el("div",{class:"mini",text:i.name[0]}),
-        el("div",{}, el("div",{text:i.name}), el("small",{text:(i.code?"Cód. "+i.code+" · ":"")+(i.size?"Talla "+i.size+" · ":"")+money(i.price)})),
+        el("div",{}, el("div",{text:i.name}), el("small",{text:(i.code?"Cód. "+i.code+" · ":"")+(i.color?i.color+" · ":"")+(i.size?"Talla "+i.size+" · ":"")+money(i.price)})),
         el("div",{class:"qty"}, el("button",{"aria-label":"Quitar uno",text:"−",onclick(){ i.qty--; if(i.qty<1) cart=cart.filter(x=>x!==i); saveCart(); draw(); }}), el("span",{text:i.qty}), el("button",{"aria-label":"Agregar uno",text:"+",onclick(){ i.qty++; saveCart(); draw(); }})))),
       el("div",{class:"total"}, el("span",{text:"Total"}), el("b",{text:money(total)})), bs(total)?el("p",{class:"bs",style:"text-align:right;margin:-6px 0 14px",text:bs(total)+" a tasa BCV"}):null,
       el("a",{class:"btn wa block",href:waLink(msg),target:"_blank",rel:"noopener",text:"Enviar pedido por WhatsApp",onclick(){ track("wa",null); }})
@@ -783,16 +797,18 @@ function productForm(body,p){
   const all=[...new Set([...String(S.sizeList).split(",").map(s=>s.trim()).filter(Boolean), ...(p.sizes||[])])];
   const sizeBox = S.sizesOn ? el("div",{class:"f"}, el("div",{class:"lab",text:"Tallas disponibles de esta prenda"}), el("div",{class:"sizes"}, all.map(s=>el("button",{type:"button","aria-pressed":String(p.sizes.includes(s)),text:s,onclick(e){ p.sizes = p.sizes.includes(s)? p.sizes.filter(x=>x!==s) : [...p.sizes,s]; e.currentTarget.setAttribute("aria-pressed",String(p.sizes.includes(s))); }}))))
     : el("p",{class:"help",text:"Las tallas están apagadas. Puedes activarlas en Personalizar."});
+  p.colors=pColors(p);
+  const colorBoxA = el("div",{class:"f"}, el("div",{class:"lab",text:"Colores disponibles (toca todos los que tengas de esta prenda)"}), el("div",{class:"sizes colorpick"}, COLORS.map(([c])=>el("button",{type:"button","aria-pressed":String(p.colors.includes(c)),onclick(e){ p.colors = p.colors.includes(c)? p.colors.filter(x=>x!==c) : [...p.colors,c]; e.currentTarget.setAttribute("aria-pressed",String(p.colors.includes(c))); }}, dot(c), c))));
   const chk=(id,label,key)=>{ const i=el("input",{type:"checkbox",id}); i.checked=!!p[key]; i.onchange=()=>p[key]=i.checked; return el("label",{class:"sw",for:id}, i, label); };
   const form=el("form",{class:"box",async onsubmit(e){ e.preventDefault();
-    const row={name:$("#pn").value.trim(),price:Number($("#pp").value)||0,old_price:$("#po").value?Number($("#po").value):null,category:SEC_ORDER.find(c=>ckey(c)===ckey(p.category))||"",subcat:$("#psub").value.trim(),code:$("#pcode").value.trim().toUpperCase(),description:$("#pd").value.trim(),images:p.images,sizes:p.sizes||[],featured:!!p.featured,active:!!p.active,sold_out:!!p.sold_out};
+    const row={name:$("#pn").value.trim(),price:Number($("#pp").value)||0,old_price:$("#po").value?Number($("#po").value):null,category:SEC_ORDER.find(c=>ckey(c)===ckey(p.category))||"",subcat:$("#psub").value.trim(),code:$("#pcode").value.trim().toUpperCase(),description:$("#pd").value.trim(),images:p.images,sizes:p.sizes||[],colors:p.colors||[],featured:!!p.featured,active:!!p.active,sold_out:!!p.sold_out};
     if (!row.name) return toast("Escribe el nombre de la prenda");
     if (!row.category) return toast("Elige la sección: Niña, Niño, Conjuntos tejidos o Accesorios");
     row.stock=Math.max(0,parseInt($("#pu").value)||0); if (row.stock===0) row.sold_out=true; else if (!p.id || (p.stock??1)===0) row.sold_out=false;
     const sv=e.target.querySelector(".btn.fill"); if (sv.disabled) return; sv.disabled=true; sv.textContent="Guardando…";
     const fail=m=>{ sv.disabled=false; sv.textContent="Guardar"; toast(m); };
     let id=p.id;
-    const why=err=>/code|subcat/i.test(err.message||"")?"Falta activar los códigos en Supabase (corre la línea SQL)":"No se pudo guardar. Revisa tu conexión.";
+    const why=err=>/code|subcat|colors/i.test(err.message||"")?"Falta activar los códigos en Supabase (corre la línea SQL)":"No se pudo guardar. Revisa tu conexión.";
     if (id){ const {error}=await sb.from("bk_products").update(row).eq("id",id); if (error) return fail(why(error)); }
     else { const {data,error}=await sb.from("bk_products").insert(row).select("id").single(); if (error) return fail(why(error)); id=data.id; }
     const cv=$("#pk").value;
@@ -809,7 +825,7 @@ function productForm(body,p){
     el("datalist",{id:"sublist"}, [...new Set(["Pantalones","Franelas","Conjuntos","Vestidos","Shorts","Faldas","Bodys","Pijamas",...products.map(x=>x.subcat).filter(Boolean)])].map(c=>el("option",{value:c}))),
     field("pd","Descripción (opcional)",p.description,"area",{maxlength:600}),
     el("div",{class:"f"}, el("label",{for:"pf",text:"Fotos (hasta 6, la primera es la portada)"}), pics, file),
-    sizeBox, chk("ca","En la web (desmárcala para deshabilitarla)","active"), chk("cf","Destacada (aparece primero)","featured"), chk("cs","Agotada","sold_out"),
+    colorBoxA, sizeBox, chk("ca","En la web (desmárcala para deshabilitarla)","active"), chk("cf","Destacada (aparece primero)","featured"), chk("cs","Agotada","sold_out"),
     el("div",{class:"two",style:"margin-top:14px"}, el("button",{type:"button",class:"btn",text:"Cancelar",onclick(){editing=null;renderAdmin();}}), el("button",{class:"btn fill",text:"Guardar"})));
   body.append(el("h2",{text:p.id?"Editar prenda":"Nueva prenda"}), form);
 }
