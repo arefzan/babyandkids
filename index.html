@@ -240,7 +240,7 @@ header.top{background:color-mix(in srgb,#fff 88%,transparent)}
 .chip[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
 .chips.sz .chip{min-width:48px;padding:0 14px}
 .chips.sz .chip[aria-pressed="true"]{background:var(--leaf);border-color:var(--leaf)}
-.szpick{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 0 14px;font-size:14px;color:var(--soft)}
+.szpick{display:flex;justify-content:flex-end;flex-wrap:nowrap;align-items:center;gap:8px;margin:0 0 14px;font-size:14px;color:var(--soft)}
 .szpick select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232A2342' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 12px center/10px;border-radius:999px;height:36px;padding:0 32px 0 14px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
 .szpick select.on{border-color:var(--leaf);color:var(--leaf)}
 .grid{gap:28px 14px}
@@ -349,6 +349,12 @@ footer.foot::before{content:"";position:absolute;top:-1px;left:50%;transform:tra
 .cdots{display:flex;gap:4px;flex-wrap:wrap;padding:2px 2px 0}
 .colorpick button{display:inline-flex;align-items:center;gap:8px;padding:0 14px}
 .colorpick button .cdot{width:14px;height:14px}
+.szgrow{flex:1}
+.sharebtn{white-space:nowrap}
+@media(max-width:520px){ .szpick label{display:none} }
+.sharebtn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.sharebtn span{color:var(--brand);font-size:15px}
+.sharebtn:hover{border-color:var(--ink)}
 .pcode{display:block;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding:0 2px}
 .info .pcode{font-size:12px;margin:-4px 0 8px}
 .demorib{position:fixed;left:12px;bottom:18px;z-index:35;max-width:calc(100vw - 100px);background:var(--ink);color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
@@ -545,9 +551,21 @@ function visible(){ const q=$("#q").value.trim().toLowerCase();
 const sizeOrder=()=>String(S.sizeList).split(",").map(x=>x.trim()).filter(Boolean);
 function sortSizes(arr){ const o=sizeOrder(); return [...arr].sort((a,b)=>{ const i=o.indexOf(a), j=o.indexOf(b); return (i<0?999:i)-(j<0?999:j) || String(a).localeCompare(String(b),"es",{numeric:true}); }); }
 function renderSizes(){ const box=$("#szChips"); const have=new Set(products.filter(p=>p.active!==false).flatMap(p=>p.sizes||[]));
-  if (!S.sizesOn || !have.size){ sz="Todas"; box.replaceChildren(); box.hidden=true; return; } box.hidden=false; if (sz!=="Todas" && !have.has(sz)) sz="Todas";
+  const shareBtn=el("button",{class:"sharebtn",type:"button",onclick:shareFilters}, el("span",{"aria-hidden":"true",text:"↗"}), "Compartir selección");
+  box.hidden=false;
+  if (!S.sizesOn || !have.size){ sz="Todas"; box.replaceChildren(shareBtn); return; } if (sz!=="Todas" && !have.has(sz)) sz="Todas";
   const sel=el("select",{id:"szSel",class:sz!=="Todas"?"on":null,"aria-label":"Filtrar por talla",onchange(){ sz=sel.value; renderSizes(); renderGrid(); }}, ["Todas",...sortSizes(have)].map(k=>el("option",{value:k,text:k==="Todas"?"Todas las tallas":"Talla "+k})));
-  sel.value=sz; box.replaceChildren(el("label",{for:"szSel",text:"Filtrar"}), sel); }
+  sel.value=sz; box.replaceChildren(shareBtn, el("span",{class:"szgrow"}), el("label",{for:"szSel",text:"Filtrar"}), sel); }
+/* ---- Links para compartir una selección: ?seccion=niña&categoria=conjuntos&talla=2 ---- */
+function filtersURL(){ const u=new URL(location.origin+location.pathname);
+  if (cat!=="Todo") u.searchParams.set("seccion",cat); if (sub!=="Todas") u.searchParams.set("categoria",sub); if (sz!=="Todas") u.searchParams.set("talla",sz); return u.toString(); }
+function filtersLabel(){ const parts=[]; if (cat!=="Todo") parts.push(clabel(cat)); if (sub!=="Todas") parts.push(clabel(sub)); if (sz!=="Todas") parts.push("Talla "+sz); return parts.join(" · "); }
+function syncURL(){ try{ history.replaceState(null,"",filtersURL().replace(location.origin,"")+location.hash); }catch(e){} }
+async function shareFilters(){ const url=filtersURL(); const what=filtersLabel(); const title=S.name+(what?" — "+what:"");
+  try{ if (navigator.share){ await navigator.share({title, text:title, url}); return; } }catch(e){ if (e&&e.name==="AbortError") return; }
+  try{ await navigator.clipboard.writeText(url); toast("Link copiado: pégalo en WhatsApp"); }catch(e){ prompt("Copia este link:",url); } }
+function readURLFilters(){ const q=new URLSearchParams(location.search); const c=q.get("seccion"), sc=q.get("categoria"), t=q.get("talla");
+  if (c) cat=ckey(c); if (sc) sub=ckey(sc); if (t) sz=t.trim(); return !!(c||sc||t); }
 const SEC_ORDER=["Niña","Niño","Conjuntos tejidos","Accesorios"];
 const secRank=k=>{ const i=SEC_ORDER.map(ckey).indexOf(k); return i<0?99:i; };
 function renderChips(){ renderSizes(); const m=new Map(); products.filter(p=>p.active!==false&&ckey(p.category)).forEach(p=>{ const k=ckey(p.category); if(!m.has(k)) m.set(k,clabel(p.category)); });
@@ -573,6 +591,7 @@ function renderRate(){ const n=$("#bcvNote"); if(!n) return; if(!(BCV&&BCV.rate)
 function priceNode(p){ const d=el("div",{class:"price",text:money(p.price)}); if (p.old_price && Number(p.old_price)>Number(p.price)) d.append(el("s",{text:money(p.old_price)}));
   const b=bs(p.price); return b? el("div",{class:"pricewrap"}, d, el("small",{class:"bs",text:b})) : d; }
 function renderGrid(){
+  if (!loading && !failed) syncURL();
   if (loading) return $("#grid").replaceChildren(...Array.from({length:8},()=>el("div",{class:"card sk","aria-hidden":"true"}, el("div",{class:"ph"}), el("i"), el("i"))));
   if (failed) return $("#grid").replaceChildren(el("div",{class:"empty"}, el("p",{text:"No pudimos cargar la colección. Revisa tu conexión."}), el("button",{class:"btn",text:"Intentar de nuevo",onclick:()=>start()})));
   const list=visible();
@@ -886,7 +905,9 @@ async function start(){
   document.addEventListener("visibilitychange",()=>{ if (document.visibilityState==="visible") loadBCV(); });
   loading=true; failed=false; renderStore(); route();
   try { await loadData(); } catch(e) { live=false; }
+  const fromLink=readURLFilters();
   loading=false; failed=!live; renderStore();
+  if (fromLink && live && location.hash!=="#admin") setTimeout(()=>{ const c=$("#catalogo"); if (c) c.scrollIntoView({behavior:"smooth"}); },150);
   if (live){ route();
     try { const {data:{session}}=await sb.auth.getSession(); isAdmin=!!session; } catch(e){}
     let seen=false; try{ seen=sessionStorage.getItem("bk_seen")==="1"; sessionStorage.setItem("bk_seen","1"); }catch(e){}
